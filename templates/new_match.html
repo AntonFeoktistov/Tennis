@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Новый матч</title>
+</head>
+
+<body>
+    <h1>Новый матч</h1>
+    <form action="/newmatch" method="POST">
+        <label for="player1">Имя первого игрока:</label>
+        <input type="text" id="player1" name="player_1" required>
+        {% if error_1 %}
+        <span>{{ error_1 }}</span>
+        {% endif %}
+        <br><br>
+
+        <label for="player2">Имя второго игрока:</label>
+        <input type="text" id="player2" name="player_2" required>
+        {% if error_2 %}
+        <span>{{ error_2 }}</span>
+        {% endif %}
+        <br><br>
+
+        <button type="submit">Начать матч</button>
+    </form>
+</body>
+
+</html>
