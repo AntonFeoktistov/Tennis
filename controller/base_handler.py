@@ -34,14 +34,32 @@ class BaseHandler(BaseHTTPRequestHandler):
         form = self.get_form()
         if self.path == "/newmatch":
             try:
-                match = self.service.create_match(form)
-                html = self.view.render_template("match.html", match=match)
+                match, player1, player2 = self.service.create_match(form)
+                html = self.view.render_template(
+                    "match.html",
+                    match=match,
+                    name1=player1.name,
+                    name2=player2.name,
+                    score1=match.score.get(str(match.player1_id)),
+                    score2=match.score.get(str(match.player2_id)),
+                )
                 self.send_html(html, 200)
             except NotValidNameError as e:
                 html = self.view.render_template(
                     "new_match.html", error1=e.error1, error2=e.error2
                 )
                 self.send_html(html, 400)
+        if self.path == "/score":
+            match, player1, player2 = self.service.add_score(form)
+            html = self.view.render_template(
+                "match.html",
+                match=match,
+                name1=player1.name,
+                name2=player2.name,
+                score1=match.score.get(str(match.player1_id)),
+                score2=match.score.get(str(match.player2_id)),
+            )
+            self.send_html(html, 200)
 
     def send_html(self, html: str, status: int):
         self.send_response(status)

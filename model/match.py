@@ -24,3 +24,15 @@ class Match(Base):
 
     def __repr__(self):
         return f"<Match(id={self.id}, player1_id={self.player1_id}, player2_id={self.player2_id}, winner_id={self.winner_id})>"
+
+    def update_score(self, player_id: int, new_data: dict):
+        """Обновляет счёт и гарантирует сохранение"""
+        # Создаём копию
+        score_copy = dict(self.score)
+
+        # Обновляем
+        if str(player_id) in score_copy:
+            score_copy[str(player_id)].update(new_data)
+
+        # Присваиваем (SQLAlchemy видит изменение)
+        self.score = score_copy

@@ -1,3 +1,4 @@
+import copy
 from functools import cached_property
 
 from .validator import Validator
@@ -25,59 +26,80 @@ class Service:
             raise errors.NotValidNameError(error1, error2)
         player1 = self.player_repository.get_or_create_player(name1)
         player2 = self.player_repository.get_or_create_player(name2)
-        print(player1, player2)
-        return self.match_repository.create_match(player1, player2)
+        match = self.match_repository.create_match(player1, player2)
+        self.match_repository.save()
+        return (match, player1, player2)
 
-    def change_score(self, form):
-        player_name = form.get("player_name")
-        match_id = form.get("match_id")
-        player = self.player_repository.get_player_by_name(player_name)
+    def add_score(self, form: dict):
+        match_id = form.get("match_id")[0]
         match = self.match_repository.get_match_by_id(match_id)
-        opponent = self.match_repository.get_opponent(match, player)
-        self.add_point(match, player, opponent)
+        player_id = form.get("player_id")[0]
+        opponent_id = self.get_opponent_id(match, player_id)
+        player = self.player_repository.get_player_by_id(player_id)
+        opponent = self.player_repository.get_player_by_id(opponent_id)
 
-    def add_point(self, match: Match, player: Player, opponent: Player):
-        player_score = match.score.get(player.name)
-        opponent_score = match.score.get(opponent.name)
+        match = self.add_point(match, player_id, opponent_id)
+        print(match.score[str(player.id)])
+        print(match.score[str(opponent.id)])
+        winner = self.get_winner(match)
+        match.winner_id = winner.id if winner else None
+        match = self.match = self.match_repository.get_match_by_id(match_id)
+        return (match, player, opponent)
 
-        if player_score.get("points") in (Scores.LOVE, Scores.FIFTEEN, Scores.THIRTY):
-            player_score["points"] = player.score.get("points").next()
-            return
+    def add_point(self, match: Match, player_id: int, opponent_id: int):
+        player_score = match.score.get(str(player_id))
+        opponent_score = match.score.get(str(opponent_id))
 
         if self.is_game_ball(player_score, opponent_score):
             self.add_game(player_score, opponent_score)
-            return
-
-        if player_score.get("points") in (0, 1, 2, 3, 4, 5):
+        elif self.is_tiebreak(player_score, opponent_score):
             player_score["points"] += 1
+        elif player_score.get("points") == 40:
+            if opponent_score.get("points") == 40:
+                player_score["points"] = "AD"
+            elif opponent_score.get("points") == "AD":
+                opponent_score["points"] = 40
+        else:
+            player_score["points"] += 15
+
+        score_copy = copy.deepcopy(match.score)
+        score_copy[str(player_id)] = player_score
+        score_copy[str(opponent_id)] = opponent_score
+        match.score = score_copy
+        return match
 
     def add_game(self, player_score, opponent_score):
         if not self.is_set_ball(player_score, opponent_score):
             player_score["games"] += 1
-            player_score["points"] = Scores.LOVE
-            opponent_score["points"] = Scores.LOVE
+            player_score["points"] = 0
+            opponent_score["points"] = 0
             return
         self.add_set(player_score, opponent_score)
 
     def add_set(self, player_score, opponent_score):
         if not self.is_set_ball(player_score, opponent_score):
             player_score["sets"] += 1
-            player_score["points"] = Scores.LOVE
-            opponent_score["points"] = Scores.LOVE
+            player_score["points"] = 0
+            opponent_score["points"] = 0
             player_score["games"] = 0
             opponent_score["games"] = 0
 
-        self.finish_match()
-
-    def finish_match():
-        pass
+    def get_winner(
+        self,
+        match: Match,
+    ):
+        if match.score[str(match.player1_id)].get("sets") == 2:
+            return match.player1
+        if match.score[str(match.player2_id)].get("sets") == 2:
+            return match.player2
+        return None
 
     def is_game_ball(self, player_score, opponent_score):
-        if player_score.get("points") == Scores.FORTY:
-            if opponent_score.get("points") not in (Scores.FORTY, Scores.AD):
+        if player_score.get("points") == 40:
+            if opponent_score.get("points") not in (40, "AD"):
                 return True
-        if player_score.get("points") == Scores.AD:
-            if opponent_score.get("points") != Scores.AD:
+        if player_score.get("points") == "AD":
+            if opponent_score.get("points") != "AD":
                 return True
         if player_score.get("points") == 6:
             return True
@@ -95,8 +117,16 @@ class Service:
             return True
         return False
 
+    def is_tiebreak(self, player_score, opponent_score):
+        return player_score.get("games") == 6 and (opponent_score.get("games") == 6)
+
     def get_all_matches(self):
         pass
+
+    def get_opponent_id(self, match: Match, player_id: int):
+        if match.player1_id == player_id:
+            return match.player2_id
+        return match.player1_id
 
     @cached_property
     def validator(self):
