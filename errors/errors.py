@@ -1,4 +1,4 @@
 class NotValidNameError(Exception):
-    def __init__(self, error_1: bool, error_2: bool):
-        self.error_1 = error_1
-        self.error_2 = error_2
+    def __init__(self, error1: bool, error2: bool):
+        self.error1 = error1
+        self.error2 = error2

@@ -1,3 +1,3 @@
 class Validator:
-    def validate_name(self, name):
-        return 0 < name < 36 if name else False
+    def is_name_valid(self, name):
+        return 0 < len(name) < 36 if name else False

@@ -8,6 +8,7 @@ import model
 from view.view import View
 from service.service import Service
 from errors.errors import *
+from repository.player_repository import *
 
 
 class BaseHandler(BaseHTTPRequestHandler):
@@ -20,7 +21,7 @@ class BaseHandler(BaseHTTPRequestHandler):
             html = self.view.render_template("new_match.html")
             self.send_html(html, 200)
         elif self.path == "/matches":
-            matches = model.get_all_matches()
+            matches = self.service.get_all_matches()
             html = self.view.render_template(matches=matches)
             self.send_html(html, 200)
         elif self.path.startswith("/static/"):
@@ -31,13 +32,16 @@ class BaseHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         form = self.get_form()
-        try:
-            if self.path == "/newmatch":
-                self.service.make_match(form)
-        except NotValidNameError as e:
-            html = self.view.render_template(
-                "new_match.html", error_1=e.error_1, error_2=e.error_2
-            )
+        if self.path == "/newmatch":
+            try:
+                match = self.service.create_match(form)
+                html = self.view.render_template("match.html", match=match)
+                self.send_html(html, 200)
+            except NotValidNameError as e:
+                html = self.view.render_template(
+                    "new_match.html", error1=e.error1, error2=e.error2
+                )
+                self.send_html(html, 400)
 
     def send_html(self, html: str, status: int):
         self.send_response(status)

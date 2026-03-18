@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <title>Счёт матча</title>
 </head>
+
 <body>
     <h1>Теннисный матч</h1>
 
-    
+
     <table border="1" cellpadding="10">
         <thead>
             <tr>
@@ -15,36 +17,37 @@
                 <th>Выигранные сеты</th>
                 <th>Выигранные геймы (в сете)</th>
                 <th>Очки в текущем гейме</th>
-                <th>Тайбрейк</th>
                 <th>Действие</th>
             </tr>
         </thead>
+        {% set name1 = match.player1.name%}
+        {% set name2 = match.player2.name%}
         <tbody>
             <!-- Игрок 1 -->
             <tr>
-                <td>{{player1}}</td>
-                <td id="sets_player1">{{sets_1}}</td>
-                <td id="games_player1">{{games_1}}</td>
-                <td id="points_player1">{{scores_1}}</td>
-                <td id="tbreak_player1">{{tbreak_1}}</td>
+                <td>{{name1}}</td>
+                <td id="sets_player1">{{match.score[name1].sets}}</td>
+                <td id="games_player1">{{match.score[name1].games}}</td>
+                <td id="points_player1">{{match.score[name1].points}}</td>
                 <td>
                     <form method="POST" action="/score">
-                        <input type="hidden" name="player" value="{{player1}}">
+                        <input type="hidden" name="player_name" value="{{ name1 }}">
+                        <input type="hidden" name="match_id" value="{{ match.id }}">
                         <button type="submit">+</button>
                     </form>
                 </td>
             </tr>
-            
+
             <!-- Игрок 2 -->
             <tr>
-                <td>{{player2}}</td>
-                <td id="sets_player2">{{sets_2}}</td>
-                <td id="games_player2">{{games_2}}</td>
-                <td id="points_player2">{{scores_2}}</td>
-                <td id="tbreak_player2">{{tbreak_2}}</td>
+                <td>{{name2}}</td>
+                <td id="sets_player1">{{match.score[name2].sets}}</td>
+                <td id="games_player1">{{match.score[name2].games}}</td>
+                <td id="points_player1">{{match.score[name2].points}}</td>
                 <td>
                     <form method="POST" action="/score">
-                        <input type="hidden" name="player" value="{{player2}}">
+                        <input type="hidden" name="player_name" value="{{ name2 }}">
+                        <input type="hidden" name="match_id" value="{{ match.id }}">
                         <button type="submit">+</button>
                     </form>
                 </td>
@@ -52,4 +55,5 @@
         </tbody>
     </table>
 </body>
+
 </html>

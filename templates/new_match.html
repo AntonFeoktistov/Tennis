@@ -10,16 +10,16 @@
     <h1>Новый матч</h1>
     <form action="/newmatch" method="POST">
         <label for="player1">Имя первого игрока:</label>
-        <input type="text" id="player1" name="player_1" required>
-        {% if error_1 %}
-        <span>{{ error_1 }}</span>
+        <input type="text" id="player1" name="player1" required>
+        {% if error1 %}
+        <span>{{ error1 }}</span>
         {% endif %}
         <br><br>
 
         <label for="player2">Имя второго игрока:</label>
-        <input type="text" id="player2" name="player_2" required>
-        {% if error_2 %}
-        <span>{{ error_2 }}</span>
+        <input type="text" id="player2" name="player2" required>
+        {% if error2 %}
+        <span>{{ error2 }}</span>
         {% endif %}
         <br><br>
 
