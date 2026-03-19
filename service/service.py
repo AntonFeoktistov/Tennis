@@ -1,133 +1,133 @@
-import copy
-from functools import cached_property
-
+from model.match import Match
+from model.player import Player
+from .score_mixin import ScoreMixin
 from .validator import Validator
-from errors import errors
 from repository.player_repository import PlayerRepository
 from repository.match_repository import MatchRepository
-from model.player import Player
-from model.match import Match
+from errors import errors
 from data.db import get_session
-from .scores_enum import Scores
+from sqlalchemy import update
 
 
-class Service:
+class Service(ScoreMixin):
     def __init__(self):
-        self.session = get_session()
-        self.player_repository = PlayerRepository(self.session)
-        self.match_repository = MatchRepository(self.session)
+        self.validator = Validator()
+        self.player_repository = PlayerRepository
+        self.match_repository = MatchRepository
 
     def create_match(self, form: dict):
-        name1 = (form.get("player1") or [""])[0]
-        name2 = (form.get("player2") or [""])[0]
-        error1 = not self.validator.is_name_valid(name1)
-        error2 = not self.validator.is_name_valid(name2)
-        if error1 or error2:
-            raise errors.NotValidNameError(error1, error2)
-        player1 = self.player_repository.get_or_create_player(name1)
-        player2 = self.player_repository.get_or_create_player(name2)
-        match = self.match_repository.create_match(player1, player2)
-        self.match_repository.save()
-        return (match, player1, player2)
+        session = get_session()
+        try:
+            player_repo = self.player_repository(session)
+            match_repo = self.match_repository(session)
+
+            name1 = (form.get("player1") or [""])[0]
+            name2 = (form.get("player2") or [""])[0]
+
+            if not self.validator.is_name_valid(
+                name1
+            ) or not self.validator.is_name_valid(name2):
+                raise errors.NotValidNameError()
+
+            player1 = player_repo.get_or_create_player(name1)
+            player2 = player_repo.get_or_create_player(name2)
+            match = match_repo.create_match(player1, player2)
+
+            match_repo.save()
+            match_data = self.make_match_data(match, None)
+            return match_data
+        finally:
+            session.close()
 
     def add_score(self, form: dict):
-        match_id = form.get("match_id")[0]
-        match = self.match_repository.get_match_by_id(match_id)
-        player_id = form.get("player_id")[0]
-        opponent_id = self.get_opponent_id(match, player_id)
-        player = self.player_repository.get_player_by_id(player_id)
-        opponent = self.player_repository.get_player_by_id(opponent_id)
+        session = get_session()
+        try:
+            match_repo = self.match_repository(session)
 
-        match = self.add_point(match, player_id, opponent_id)
-        print(match.score[str(player.id)])
-        print(match.score[str(opponent.id)])
-        winner = self.get_winner(match)
-        match.winner_id = winner.id if winner else None
-        match = self.match = self.match_repository.get_match_by_id(match_id)
-        return (match, player, opponent)
+            match_id = int(form.get("match_id")[0])
+            player_id = int(form.get("player_id")[0])
 
-    def add_point(self, match: Match, player_id: int, opponent_id: int):
-        player_score = match.score.get(str(player_id))
-        opponent_score = match.score.get(str(opponent_id))
+            # Получаем матч
+            match = match_repo.get_match_by_id(match_id)
+            if not match:
+                raise ValueError(f"Match {match_id} not found")
 
-        if self.is_game_ball(player_score, opponent_score):
-            self.add_game(player_score, opponent_score)
-        elif self.is_tiebreak(player_score, opponent_score):
-            player_score["points"] += 1
-        elif player_score.get("points") == 40:
-            if opponent_score.get("points") == 40:
-                player_score["points"] = "AD"
-            elif opponent_score.get("points") == "AD":
-                opponent_score["points"] = 40
-        else:
-            player_score["points"] += 15
+            opponent_id = self.get_opponent_id(match, player_id)
 
-        score_copy = copy.deepcopy(match.score)
-        score_copy[str(player_id)] = player_score
-        score_copy[str(opponent_id)] = opponent_score
-        match.score = score_copy
-        return match
+            print(f"BEFORE - Score from DB: {match.score}")
 
-    def add_game(self, player_score, opponent_score):
-        if not self.is_set_ball(player_score, opponent_score):
-            player_score["games"] += 1
-            player_score["points"] = 0
-            opponent_score["points"] = 0
-            return
-        self.add_set(player_score, opponent_score)
+            # Обновляем счет через mixin
+            new_score = self.update_score_dict(match.score, player_id, opponent_id)
+            print(f"New score calculated: {new_score}")
 
-    def add_set(self, player_score, opponent_score):
-        if not self.is_set_ball(player_score, opponent_score):
-            player_score["sets"] += 1
-            player_score["points"] = 0
-            opponent_score["points"] = 0
-            player_score["games"] = 0
-            opponent_score["games"] = 0
+            # Определяем победителя
+            winner = self.get_winner_from_score(new_score, match)
 
-    def get_winner(
-        self,
-        match: Match,
-    ):
-        if match.score[str(match.player1_id)].get("sets") == 2:
-            return match.player1
-        if match.score[str(match.player2_id)].get("sets") == 2:
-            return match.player2
-        return None
+            # Обновляем через прямой SQL запрос
+            from model.match import Match as MatchModel
 
-    def is_game_ball(self, player_score, opponent_score):
-        if player_score.get("points") == 40:
-            if opponent_score.get("points") not in (40, "AD"):
-                return True
-        if player_score.get("points") == "AD":
-            if opponent_score.get("points") != "AD":
-                return True
-        if player_score.get("points") == 6:
-            return True
+            # Обновляем счет
+            stmt = (
+                update(MatchModel)
+                .where(MatchModel.id == match_id)
+                .values(score=new_score)
+            )
+            session.execute(stmt)
 
-        return False
+            # Если есть победитель, обновляем и его
+            if winner:
+                stmt = (
+                    update(MatchModel)
+                    .where(MatchModel.id == match_id)
+                    .values(winner_id=winner.id)
+                )
+                session.execute(stmt)
 
-    def is_set_ball(self, player_score, opponent_score):
-        if player_score.get("games") >= 5:
-            if player_score.get("games") - opponent_score("games") >= 2:
-                return True
-        return False
+            # Коммитим изменения
+            session.commit()
+            print("Changes committed successfully")
 
-    def is_match_ball(self, player_score, opponent_score):
-        if player_score.get("sets") == 1:
-            return True
-        return False
+            # Получаем обновленный матч
+            session.expire_all()
+            updated_match = match_repo.get_match_by_id(match_id)
+            print(f"AFTER save - Score from DB: {updated_match.score}")
 
-    def is_tiebreak(self, player_score, opponent_score):
-        return player_score.get("games") == 6 and (opponent_score.get("games") == 6)
+            match_data = self.make_match_data(updated_match, winner)
+            return match_data
 
-    def get_all_matches(self):
-        pass
+        except Exception as e:
+            print(f"Error: {e}")
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
-    def get_opponent_id(self, match: Match, player_id: int):
+    def get_opponent_id(self, match: Match, player_id: int) -> int:
         if match.player1_id == player_id:
             return match.player2_id
-        return match.player1_id
+        elif match.player2_id == player_id:
+            return match.player1_id
+        raise ValueError(f"Игрок {player_id} не участвует в матче {match.id}")
 
-    @cached_property
-    def validator(self):
-        return Validator()
+    def get_all_matches(self):
+        session = get_session()
+        try:
+            match_repo = self.match_repository(session)
+            return match_repo.get_all_matches()
+        finally:
+            session.close()
+
+    def make_match_data(self, match: Match, winner: Player):
+        score1 = match.score.get(str(match.player1_id), {})
+        score2 = match.score.get(str(match.player2_id), {})
+        return {
+            "id": match.id,
+            "player1_id": match.player1_id,
+            "player2_id": match.player2_id,
+            "winner_id": match.winner_id,
+            "score1": score1,
+            "score2": score2,
+            "player1_name": match.player1.name if match.player1 else None,
+            "player2_name": match.player2.name if match.player2 else None,
+            "winner_name": winner.name if winner else None,
+        }

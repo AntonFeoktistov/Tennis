@@ -9,56 +9,59 @@
 <body>
     <h1>Теннисный матч</h1>
 
-
+    <!-- Если матч продолжается -->
     <table border="1" cellpadding="10">
         <thead>
             <tr>
                 <th>Игрок</th>
                 <th>Выигранные сеты</th>
-                <th>Выигранные геймы (в сете)</th>
+                <th>Выигранные геймы (в текущем сете)</th>
                 <th>Очки в текущем гейме</th>
                 <th>Действие</th>
             </tr>
         </thead>
         <tbody>
-            <!-- Игрок 1 -->
             <tr>
-                <td>{{name1}}</td>
-                <td id="sets_player1">{{score1.sets}}</td>
-                <td id="games_player1">{{score1.games}}</td>
-                <td id="points_player1">{{score1.points}}</td>
+                <td>{{ match.player1_name }}</td>
+                <td>{{ match.score1.sets }}</td>
+                <td>{{ match.score1.games }}</td>
+                <td>{{ match.score1.points }}</td>
                 <td>
+                    {% if not match.winner_name %}
                     <form method="POST" action="/score">
                         <input type="hidden" name="player_id" value="{{ match.player1_id }}">
                         <input type="hidden" name="match_id" value="{{ match.id }}">
                         <button type="submit">+</button>
                     </form>
+                    {% endif %}
                 </td>
             </tr>
-
-            <!-- Игрок 2 -->
             <tr>
-                <td>{{name2}}</td>
-                <td id="sets_player1">{{score2.sets}}</td>
-                <td id="games_player1">{{score2.games}}</td>
-                <td id="points_player1">{{score2.points}}</td>
+                <td>{{ match.player2_name }}</td>
+                <td>{{ match.score2.sets }}</td>
+                <td>{{ match.score2.games }}</td>
+                <td>{{ match.score2.points }}</td>
                 <td>
+                    {% if not match.winner_name %}
                     <form method="POST" action="/score">
                         <input type="hidden" name="player_id" value="{{ match.player2_id }}">
                         <input type="hidden" name="match_id" value="{{ match.id }}">
                         <button type="submit">+</button>
                     </form>
+                    {% endif %}
                 </td>
             </tr>
         </tbody>
     </table>
-    <ul>
-        <li><a href="/newmatch">Начать новый матч</a></li>
-        <li><a href="/matches">Сыгранные матчи</a></li>
-    </ul>
-    {% if match.winner %}
-    <h2>Победитель матча – {{match.winner}}</h2>
+    {% if match.winner_name %}
+    <!-- Если есть победитель -->
+    <h2>🏆 ПОБЕДИТЕЛЬ: {{ match.winner_name }} 🏆</h2>
     {% endif %}
+    <hr>
+    <p>
+        <a href="/newmatch">➕ Новый матч</a> |
+        <a href="/matches">📋 Все матчи</a>
+    </p>
 </body>
 
 </html>

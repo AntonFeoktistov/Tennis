@@ -1,12 +1,6 @@
-# repositories/match_repository.py
-from functools import cached_property
-
 from sqlalchemy.orm import Session
 from model.match import Match
 from model.player import Player
-from datetime import datetime
-from service.scores_enum import Scores
-from .player_repository import PlayerRepository
 
 
 class MatchRepository:
@@ -16,7 +10,7 @@ class MatchRepository:
     def create_match(self, player1: Player, player2: Player) -> Match:
         """Создать новый матч"""
         match = Match(player1_id=player1.id, player2_id=player2.id)
-        self.create_score_json(match)
+        self.create_score_json(match, player1, player2)
         self.session.add(match)
         self.session.flush()
         return match
@@ -29,6 +23,10 @@ class MatchRepository:
         """Получить все активные матчи"""
         return self.session.query(Match).filter(Match.winner_id == None).all()
 
+    def get_all_matches(self) -> list[Match]:
+        """Получить все матчи"""
+        return self.session.query(Match).all()
+
     def save(self):
         """Фиксирует все изменения в БД"""
         self.session.commit()
@@ -37,16 +35,19 @@ class MatchRepository:
         """Откатывает изменения"""
         self.session.rollback()
 
-    def set_winner(self, match_id: int, winner_id: int) -> Match | None:
-        """Установить победителя матча"""
-        match = self.get_match_by_id(match_id)
-        if match:
-            match.winner_id = winner_id
-            self.session.flush()
-        return match
-
-    def create_score_json(self, match: Match):
+    def create_score_json(self, match: Match, player1: Player, player2: Player):
+        """Создает начальный JSON со счетом"""
         match.score = {
-            match.player1_id: {"sets": 0, "games": 0, "points": 0},
-            match.player2_id: {"sets": 0, "games": 0, "points": 0},
+            str(player1.id): {
+                "name": player1.name,
+                "sets": 0,
+                "games": 0,
+                "points": 0,
+            },
+            str(player2.id): {
+                "name": player2.name,
+                "sets": 0,
+                "games": 0,
+                "points": 0,
+            },
         }
