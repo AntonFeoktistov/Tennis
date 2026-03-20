@@ -44,61 +44,38 @@ class Service(ScoreMixin):
         try:
             match_repo = self.match_repository(session)
 
-            match_id = int(form.get("match_id")[0])
+            match_uuid = form.get("match_uuid")[0]
             player_id = int(form.get("player_id")[0])
-
-            # Получаем матч
-            match = match_repo.get_match_by_id(match_id)
-            if not match:
-                raise ValueError(f"Match {match_id} not found")
-
+            match = match_repo.get_match_by_uuid(match_uuid)
             opponent_id = self.get_opponent_id(match, player_id)
 
-            print(f"BEFORE - Score from DB: {match.score}")
-
-            # Обновляем счет через mixin
             new_score = self.update_score_dict(match.score, player_id, opponent_id)
-            print(f"New score calculated: {new_score}")
-
-            # Определяем победителя
-            winner = self.get_winner_from_score(new_score, match)
-
-            # Обновляем через прямой SQL запрос
-            from model.match import Match as MatchModel
-
-            # Обновляем счет
-            stmt = (
-                update(MatchModel)
-                .where(MatchModel.id == match_id)
-                .values(score=new_score)
-            )
-            session.execute(stmt)
-
-            # Если есть победитель, обновляем и его
+            match_repo.update_score(match.id, new_score)
+            winner = self.get_winner(match)
             if winner:
-                stmt = (
-                    update(MatchModel)
-                    .where(MatchModel.id == match_id)
-                    .values(winner_id=winner.id)
-                )
-                session.execute(stmt)
+                match_repo.update_winner(match.id, winner.id)
 
-            # Коммитим изменения
-            session.commit()
-            print("Changes committed successfully")
-
-            # Получаем обновленный матч
+            match_repo.save()
             session.expire_all()
-            updated_match = match_repo.get_match_by_id(match_id)
-            print(f"AFTER save - Score from DB: {updated_match.score}")
-
-            match_data = self.make_match_data(updated_match, winner)
-            return match_data
-
+            updated_match = match_repo.get_match_by_id(match.id)
+            return self.make_match_data(updated_match, winner)
         except Exception as e:
             print(f"Error: {e}")
             session.rollback()
             raise
+        finally:
+            session.close()
+
+    def get_match(self, query):
+        session = get_session()
+        try:
+            match_repo = self.match_repository(session)
+            uuid = (query.get("uuid") or [""])[0]
+            if not uuid:
+                return {}
+            match = match_repo.get_match_by_uuid(uuid)
+            match_data = self.make_match_data(match, match.winner) if match else {}
+            return match_data
         finally:
             session.close()
 
@@ -107,13 +84,18 @@ class Service(ScoreMixin):
             return match.player2_id
         elif match.player2_id == player_id:
             return match.player1_id
-        raise ValueError(f"Игрок {player_id} не участвует в матче {match.id}")
 
-    def get_all_matches(self):
+    def get_all_matches_data(self):
         session = get_session()
         try:
             match_repo = self.match_repository(session)
-            return match_repo.get_all_matches()
+            matches = match_repo.get_all_matches()
+            matches_data = []
+            for match in matches:
+                winner = self.get_winner(match)
+                match_data = self.make_match_data(match, winner)
+                matches_data.append(match_data)
+            return matches_data
         finally:
             session.close()
 
@@ -122,6 +104,7 @@ class Service(ScoreMixin):
         score2 = match.score.get(str(match.player2_id), {})
         return {
             "id": match.id,
+            "uuid": match.uuid,
             "player1_id": match.player1_id,
             "player2_id": match.player2_id,
             "winner_id": match.winner_id,

@@ -21,9 +21,19 @@ class BaseHandler(BaseHTTPRequestHandler):
             html = self.view.render_template("new_match.html")
             self.send_html(html, 200)
         elif self.path == "/matches":
-            matches = self.service.get_all_matches()
-            html = self.view.render_template(matches=matches)
+            matches = self.service.get_all_matches_data()
+            html = self.view.render_template("matches.html", matches=matches)
             self.send_html(html, 200)
+
+        elif self.path.startswith("/match-score"):
+            query = self.get_query_params()
+            match_data = self.service.get_match(query)
+            if match_data:
+                html = self.view.render_template("match.html", match=match_data)
+                self.send_html(html, 200)
+                return
+            html = self.view.render_template("not_found.html")
+            self.send_html(html, 404)
         elif self.path.startswith("/static/"):
             self.send_static()
         else:
@@ -38,11 +48,9 @@ class BaseHandler(BaseHTTPRequestHandler):
                 html = self.view.render_template("match.html", match=match_data)
                 self.send_html(html, 200)
             except NotValidNameError as e:
-                html = self.view.render_template(
-                    "new_match.html", error1=e.error1, error2=e.error2
-                )
+                html = self.view.render_template("new_match.html", error=True)
                 self.send_html(html, 400)
-        if self.path == "/score":
+        if self.path == "/match-score":
             match_data = self.service.add_score(form)
             html = self.view.render_template("match.html", match=match_data)
             self.send_html(html, 200)
@@ -72,6 +80,10 @@ class BaseHandler(BaseHTTPRequestHandler):
             return urllib.parse.parse_qs(post_data.decode("utf-8"))
         except (ValueError, UnicodeDecodeError):
             return {}
+
+    def get_query_params(self):
+        parsed = urllib.parse.urlparse(self.path)
+        return urllib.parse.parse_qs(parsed.query)
 
     @cached_property
     def view(self):

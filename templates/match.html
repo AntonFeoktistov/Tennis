@@ -28,9 +28,9 @@
                 <td>{{ match.score1.points }}</td>
                 <td>
                     {% if not match.winner_name %}
-                    <form method="POST" action="/score">
+                    <form method="POST" action="/match-score">
+                        <input type="hidden" name="match_uuid" value="{{ match.uuid }}">
                         <input type="hidden" name="player_id" value="{{ match.player1_id }}">
-                        <input type="hidden" name="match_id" value="{{ match.id }}">
                         <button type="submit">+</button>
                     </form>
                     {% endif %}
@@ -43,9 +43,9 @@
                 <td>{{ match.score2.points }}</td>
                 <td>
                     {% if not match.winner_name %}
-                    <form method="POST" action="/score">
+                    <form method="POST" action="/match-score">
+                        <input type="hidden" name="match_uuid" value="{{ match.uuid }}">
                         <input type="hidden" name="player_id" value="{{ match.player2_id }}">
-                        <input type="hidden" name="match_id" value="{{ match.id }}">
                         <button type="submit">+</button>
                     </form>
                     {% endif %}
