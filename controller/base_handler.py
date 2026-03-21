@@ -14,19 +14,20 @@ from repository.player_repository import *
 class BaseHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
+        query = self.get_query_params()
         if self.path == "/":
             html = self.view.render_index(name="Пользователь")
             self.send_html(html, 200)
         elif self.path == "/newmatch":
             html = self.view.render_template("new_match.html")
             self.send_html(html, 200)
-        elif self.path == "/matches":
-            matches = self.service.get_all_matches_data()
-            html = self.view.render_template("matches.html", matches=matches)
+
+        elif self.path.startswith("/matches"):
+            page_data = self.service.get_all_matches_data(query)
+            html = self.view.render_template("matches.html", **page_data)
             self.send_html(html, 200)
 
         elif self.path.startswith("/match-score"):
-            query = self.get_query_params()
             match_data = self.service.get_match(query)
             if match_data:
                 html = self.view.render_template("match.html", match=match_data)

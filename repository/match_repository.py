@@ -21,9 +21,28 @@ class MatchRepository:
     def get_match_by_uuid(self, match_uuid: str) -> Match | None:
         return self.session.query(Match).filter(Match.uuid == match_uuid).first()
 
-    def get_active_matches(self) -> list[Match]:
-        """Получить все активные матчи"""
-        return self.session.query(Match).filter(Match.winner_id == None).all()
+    def get_filtred_matches(
+        self,
+        player_name: str = None,
+        completed_only: bool = False,
+        page: int = 1,
+        per_page: int = 5,
+    ) -> tuple[list[Match], int]:
+
+        query = self.session.query(Match)
+        if player_name and player_name.strip():
+            query = query.filter(
+                (Match.player1.has(Player.name.ilike(f"%{player_name}%")))
+                | (Match.player2.has(Player.name.ilike(f"%{player_name}%")))
+            )
+        if completed_only:
+            query = query.filter(Match.winner_id.isnot(None))
+
+        total_count = query.count()
+        offset = (page - 1) * per_page
+        matches = query.order_by(Match.id.desc()).limit(per_page).offset(offset).all()
+
+        return matches, total_count
 
     def get_all_matches(self) -> list[Match]:
         return self.session.query(Match).all()

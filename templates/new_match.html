@@ -4,23 +4,30 @@
 <head>
     <meta charset="UTF-8">
     <title>Новый матч</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 
 <body>
-    <h1>Новый матч</h1>
-    <form action="/newmatch" method="POST">
-        <label for="player1">Имя первого игрока:</label>
-        <input type="text" id="player1" name="player1" required>
-        <br><br>
+    <div class="newmatch-container">
+        <div class="newmatch-form">
+            <h1>🎾 Новый матч</h1>
+            <form action="/newmatch" method="POST">
+                <label for="player1">Имя первого игрока:</label>
+                <input type="text" id="player1" name="player1" placeholder="Например: Роджер Федерер" required>
 
-        <label for="player2">Имя второго игрока:</label>
-        <input type="text" id="player2" name="player2" required>
-        <br><br>
-        <button type="submit">Начать матч</button>
-        {% if error %}
-        <br> Ошибка! Имя игрока должно быть заполнено!<br>
-        {% endif %}
-    </form>
+                <label for="player2">Имя второго игрока:</label>
+                <input type="text" id="player2" name="player2" placeholder="Например: Рафаэль Надаль" required>
+
+                <button type="submit">Начать матч</button>
+
+                {% if error %}
+                <div class="error">
+                    ❌ Ошибка! Имя игрока должно быть заполнено!
+                </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
 </body>
 
 </html>

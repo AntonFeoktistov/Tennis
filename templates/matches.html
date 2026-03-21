@@ -3,39 +3,118 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Матчи</title>
+    <title>Сыгранные матчи</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 
 <body>
-    <h1>Таблица матчей</h1>
+    <h1>📋 Сыгранные матчи</h1>
 
-    <table border="1" cellpadding="8" cellspacing="0">
+    <!-- Форма фильтрации -->
+    <form method="GET" action="/matches" class="filter-form">
+        <div style="display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap;">
+            <!-- Поле для имени игрока -->
+            <div>
+                <label for="filter_name">Имя игрока:</label><br>
+                <input type="text" id="filter_name" name="filter_name" value="{{ filter_name }}"
+                    placeholder="Введите имя игрока" style="width: 200px;">
+            </div>
+
+            <!-- Галочка "Только завершённые" -->
+            <div>
+                <label>
+                    <input type="checkbox" name="completed_only" value="true" {% if completed_only %}checked{% endif %}>
+                    Только завершённые матчи
+                </label>
+            </div>
+
+            <!-- Кнопки -->
+            <div>
+                <button type="submit">🔍 Искать</button>
+                <a href="/matches" style="margin-left: 10px;">🗑️ Сбросить</a>
+            </div>
+        </div>
+    </form>
+
+    <!-- Таблица с матчами -->
+    <table>
         <thead>
             <tr>
                 <th>Игрок 1</th>
                 <th>Игрок 2</th>
+                <th>Счёт</th>
                 <th>Победитель</th>
                 <th>Действие</th>
             </tr>
         </thead>
         <tbody>
+            {% if matches %}
             {% for match in matches %}
             <tr>
                 <td>{{ match.player1_name }}</td>
                 <td>{{ match.player2_name }}</td>
+                <td>{{ match.score1.sets }}:{{ match.score2.sets }} ({{ match.score1.games }}:{{ match.score2.games }})
+                </td>
                 <td>{{ match.winner_name if match.winner_name else "не выявлен" }}</td>
                 <td>
-                    <a href="/match-score?uuid={{ match.uuid }}">Перейти к матчу</a>
+                    <a href="/match-score?uuid={{ match.uuid }}"
+                        style="background-color: #3498db; color: white; padding: 5px 10px; border-radius: 4px; display: inline-block;">▶️
+                        Перейти</a>
                 </td>
             </tr>
             {% endfor %}
+            {% else %}
+            <tr>
+                <td colspan="5" style="text-align: center;">Матчи не найдены</td>
+            </tr>
+            {% endif %}
         </tbody>
     </table>
 
-    <ul>
-        <li><a href="/newmatch">Начать новый матч</a></li>
-        <li><a href="/">Главная</a></li>
-    </ul>
+    <!-- Пагинация -->
+    {% if total_pages > 1 %}
+    <div class="pagination">
+        {% if current_page > 1 %}
+        <a
+            href="/matches?page={{ current_page - 1 }}{% if filter_name %}&filter_name={{ filter_name }}{% endif %}{% if completed_only %}&completed_only=true{% endif %}">
+            ← Назад
+        </a>
+        {% else %}
+        <span>← Назад</span>
+        {% endif %}
+
+        {% for p in range(1, total_pages + 1) %}
+        {% if p == current_page %}
+        <strong>{{ p }}</strong>
+        {% else %}
+        <a
+            href="/matches?page={{ p }}{% if filter_name %}&filter_name={{ filter_name }}{% endif %}{% if completed_only %}&completed_only=true{% endif %}">{{
+            p }}</a>
+        {% endif %}
+        {% endfor %}
+
+        {% if current_page < total_pages %} <a
+            href="/matches?page={{ current_page + 1 }}{% if filter_name %}&filter_name={{ filter_name }}{% endif %}{% if completed_only %}&completed_only=true{% endif %}">
+            Вперёд →
+            </a>
+            {% else %}
+            <span>Вперёд →</span>
+            {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Информация о количестве -->
+    {% if total_count > 0 %}
+    <div class="info">
+        📊 Всего матчей: {{ total_count }}, страница {{ current_page }} из {{ total_pages }}
+    </div>
+    {% endif %}
+
+    <!-- Кнопки внизу -->
+    <div class="matches-footer-buttons">
+        <a href="/newmatch">➕ Начать новый матч</a>
+        <a href="/">🏠 Главная</a>
+    </div>
 </body>
 
 </html>

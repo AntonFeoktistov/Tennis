@@ -85,17 +85,27 @@ class Service(ScoreMixin):
         elif match.player2_id == player_id:
             return match.player1_id
 
-    def get_all_matches_data(self):
+    def get_all_matches_data(self, query):
         session = get_session()
         try:
             match_repo = self.match_repository(session)
-            matches = match_repo.get_all_matches()
+
+            player_name = (query.get("filter_name") or [""])[0]
+            completed_only = (query.get("completed_only") or [""])[0]
+            page = (query.get("page") or [""])[0]
+            page = int(page) if page else 1
+            matches, total_count = match_repo.get_filtred_matches(
+                player_name, completed_only, page
+            )
             matches_data = []
             for match in matches:
                 winner = self.get_winner(match)
                 match_data = self.make_match_data(match, winner)
                 matches_data.append(match_data)
-            return matches_data
+            page_data = self.make_page_data(
+                matches_data, total_count, page, player_name, completed_only
+            )
+            return page_data
         finally:
             session.close()
 
@@ -113,4 +123,20 @@ class Service(ScoreMixin):
             "player1_name": match.player1.name if match.player1 else None,
             "player2_name": match.player2.name if match.player2 else None,
             "winner_name": winner.name if winner else None,
+        }
+
+    def make_page_data(
+        self, matches_data, total_count, page, player_name, completed_only
+    ):
+        per_page = 5
+        total_pages = (total_count + per_page - 1) // per_page
+
+        return {
+            "matches": matches_data,
+            "total_count": total_count,
+            "total_pages": total_pages,
+            "current_page": page,
+            "per_page": per_page,
+            "filter_name": player_name,
+            "completed_only": completed_only,
         }
