@@ -32,8 +32,8 @@ class MatchRepository:
         query = self.session.query(Match)
         if player_name and player_name.strip():
             query = query.filter(
-                (Match.player1.has(Player.name.ilike(f"%{player_name}%")))
-                | (Match.player2.has(Player.name.ilike(f"%{player_name}%")))
+                (Match.player1.has(Player.name == player_name))
+                | (Match.player2.has(Player.name == player_name))
             )
         if completed_only:
             query = query.filter(Match.winner_id.isnot(None))

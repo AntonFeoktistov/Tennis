@@ -1,13 +1,28 @@
 from http.server import HTTPServer
 from controller.base_handler import BaseHandler
-
+from config import Config
+from container import Container
+from router import Router
+import sys
+import controller.base_handler as base_handler_module
 
 if __name__ == "__main__":
-    server = HTTPServer(("localhost", 8000), BaseHandler)
-    print("Сервер запущен на http://localhost:8000")
+    Config.setup_logging()
+    logger = Config.get_logger(__name__)
+
+    container = Container()
+    router = Router(container)
+
+    base_handler_module.router = router
+
+    server = HTTPServer((Config.HOST, Config.PORT), BaseHandler)
+    logger.info(f"Сервер запущен на http://{Config.HOST}:{Config.PORT}")
+
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\nСервер остановлен пользователем.")
+        logger.info("Сервер остановлен пользователем.")
+        server.shutdown()
     except Exception as e:
-        print(f"Ошибка сервера: {e}")
+        logger.exception(f"Ошибка сервера: {e}")
+        sys.exit(1)

@@ -24,9 +24,11 @@ class Service(ScoreMixin):
             name1 = (form.get("player1") or [""])[0]
             name2 = (form.get("player2") or [""])[0]
 
-            if not self.validator.is_name_valid(
-                name1
-            ) or not self.validator.is_name_valid(name2):
+            if (
+                not self.validator.is_name_valid(name1)
+                or not self.validator.is_name_valid(name2)
+                or name1 == name2
+            ):
                 raise errors.NotValidNameError()
 
             player1 = player_repo.get_or_create_player(name1)
