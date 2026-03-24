@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from model.match import Match
 from model.player import Player
 from sqlalchemy import update
@@ -43,6 +43,30 @@ class MatchRepository:
         matches = query.order_by(Match.id.desc()).limit(per_page).offset(offset).all()
 
         return matches, total_count
+
+    def get_unfinished_matches(self):
+        return (
+            self.session.query(Match)
+            .options(
+                joinedload(Match.player1),
+                joinedload(Match.player2),
+                joinedload(Match.winner),
+            )
+            .filter(Match.winner_id.is_(None))
+            .all()
+        )
+
+    def get_completed_matches(self):
+        return (
+            self.session.query(Match)
+            .options(
+                joinedload(Match.player1),
+                joinedload(Match.player2),
+                joinedload(Match.winner),
+            )
+            .filter(Match.winner_id.isnot(None))
+            .all()
+        )
 
     def get_all_matches(self) -> list[Match]:
         return self.session.query(Match).all()

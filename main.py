@@ -12,15 +12,16 @@ if __name__ == "__main__":
 
     container = Container()
     router = Router(container)
-
     base_handler_module.router = router
 
+    container.service.load_unfinished_matches()
     server = HTTPServer((Config.HOST, Config.PORT), BaseHandler)
     logger.info(f"Сервер запущен на http://{Config.HOST}:{Config.PORT}")
 
     try:
         server.serve_forever()
     except KeyboardInterrupt:
+        container.service.save_active_matches()
         logger.info("Сервер остановлен пользователем.")
         server.shutdown()
     except Exception as e:

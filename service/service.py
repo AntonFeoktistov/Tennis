@@ -11,13 +11,40 @@ from dto.player_dto import PlayerDto
 from dto.match_dto import MatchDto
 from dto.score_dto import ScoreDto
 from dto.matches_dto import MatchesDto
+from .match_cache import MatchCache
+from .filter_mixin import FilterMixin
 
 
-class Service(ScoreMixin):
+class Service(ScoreMixin, FilterMixin):
     def __init__(self):
         self.validator = Validator()
         self.player_repository = PlayerRepository
         self.match_repository = MatchRepository
+        self.cache = MatchCache()
+
+    def load_unfinished_matches(self):
+        session = get_session()
+        try:
+            match_repo = self.match_repository(session)
+            matches = match_repo.get_unfinished_matches()
+            for match in matches:
+                self.cache.set(match)
+        finally:
+            session.close()
+
+    def save_active_matches(self):
+        session = get_session()
+        try:
+            match_repo = self.match_repository(session)
+            matches = self.cache.get_all()
+            for match in matches:
+                match_repo.update_score(match.id, match.score)
+                if match.winner_id:
+                    match_repo.update_winner(match.id, match.winner_id)
+            match_repo.save()
+        finally:
+            session.close()
+        self.cache.clear()
 
     def create_match(self, form: dict):
         session = get_session()
@@ -40,6 +67,7 @@ class Service(ScoreMixin):
             match = match_repo.create_match(player1, player2)
 
             match_repo.save()
+            self.cache.set(match)
             match_dto = self.make_match_dto(match, None)
             return match_dto
         finally:
@@ -52,19 +80,23 @@ class Service(ScoreMixin):
 
             match_uuid = form.get("match_uuid")[0]
             player_id = int(form.get("player_id")[0])
-            match = match_repo.get_match_by_uuid(match_uuid)
+            match = self.cache.get(match_uuid)
+            if not match:
+                match = match_repo.get_match_by_uuid(match_uuid)
             opponent_id = self.get_opponent_id(match, player_id)
 
             new_score = self.update_score_dict(match.score, player_id, opponent_id)
-            match_repo.update_score(match.id, new_score)
+            match.score = new_score
             winner = self.get_winner(match)
             if winner:
+                match.winner_id = winner.id
+                match_repo.update_score(match.id, new_score)
                 match_repo.update_winner(match.id, winner.id)
+                match_repo.save()
 
-            match_repo.save()
-            session.expire_all()
-            updated_match = match_repo.get_match_by_id(match.id)
-            return self.make_match_dto(updated_match, winner)
+                self.cache.remove(match_uuid)
+
+            return self.make_match_dto(match, winner)
         except Exception as e:
             print(f"Error: {e}")
             session.rollback()
@@ -79,9 +111,13 @@ class Service(ScoreMixin):
             uuid = (query.get("uuid") or [""])[0]
             if not uuid:
                 return {}
-            match = match_repo.get_match_by_uuid(uuid)
-            match_dto = self.make_match_dto(match, match.winner) if match else {}
-            return match_dto
+
+            match = self.cache.get(uuid)
+            if not match:
+                match = match_repo.get_match_by_uuid(uuid)
+
+            winner = self.get_winner(match)
+            return self.make_match_dto(match, winner)
         finally:
             session.close()
 
@@ -96,21 +132,19 @@ class Service(ScoreMixin):
         try:
             match_repo = self.match_repository(session)
 
-            filter_name = (query.get("filter_name") or [""])[0]
-            completed_only = (query.get("completed_only") or [""])[0]
-            page = (query.get("page") or [""])[0]
-            current_page = int(page) if page else 1
+            filter_name, completed_only, current_page = self._parse_filters(query)
 
-            matches, total_count = match_repo.get_filtred_matches(
-                filter_name, completed_only, current_page
+            matches = self._filter_by_completed_only(
+                completed_only, match_repo, self.cache
             )
-            match_dto_list = []
-            for match in matches:
-                winner = self.get_winner(match)
-                match_dto = self.make_match_dto(match, winner)
-                match_dto_list.append(match_dto)
+            matches = self._filter_by_player_name(matches, filter_name)
+            matches = self._sort_matches(matches)
+
+            total_count = len(matches)
+            matches = self._paginate_matches(matches, current_page)
+
             matches_dto = self.make_matches_dto(
-                match_dto_list, total_count, current_page, filter_name, completed_only
+                matches, total_count, current_page, filter_name, completed_only
             )
             return matches_dto
         finally:
@@ -136,12 +170,16 @@ class Service(ScoreMixin):
         )
 
     def make_matches_dto(
-        self, matches, total_count, current_page, filter_name, completed_only
+        self, matches: Match, total_count, current_page, filter_name, completed_only
     ):
         per_page = 5
         total_pages = (total_count + per_page - 1) // per_page
+        paginated_matches = []
+        for match in matches:
+            winner = self.get_winner(match)
+            paginated_matches.append(self.make_match_dto(match, winner))
         return MatchesDto(
-            matches,
+            paginated_matches,
             total_count,
             total_pages,
             current_page,
