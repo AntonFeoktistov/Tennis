@@ -24,13 +24,13 @@
                 </thead>
                 <tbody>
                     <tr>
-                        <td><strong>{{ match.player1_name }}</strong></td>
+                        <td><strong>{{ match.player1.name }}</strong></td>
                         <td>{{ match.score1.sets }}</td>
                         <td>{{ match.score1.games }}</td>
                         <td>{{ match.score1.points }}</td>
                     </tr>
                     <tr>
-                        <td><strong>{{ match.player2_name }}</strong></td>
+                        <td><strong>{{ match.player2.name }}</strong></td>
                         <td>{{ match.score2.sets }}</td>
                         <td>{{ match.score2.games }}</td>
                         <td>{{ match.score2.points }}</td>
@@ -39,26 +39,26 @@
             </table>
 
             <!-- Кнопки для добавления очков -->
-            {% if not match.winner_name %}
+            {% if not match.winner.name %}
             <div class="action-buttons">
                 <form method="POST" action="/match-score">
                     <input type="hidden" name="match_uuid" value="{{ match.uuid }}">
-                    <input type="hidden" name="player_id" value="{{ match.player1_id }}">
-                    <button type="submit">➕ {{ match.player1_name }}</button>
+                    <input type="hidden" name="player_id" value="{{ match.player1.id }}">
+                    <button type="submit">➕ {{ match.player1.name }}</button>
                 </form>
 
                 <form method="POST" action="/match-score">
                     <input type="hidden" name="match_uuid" value="{{ match.uuid }}">
-                    <input type="hidden" name="player_id" value="{{ match.player2_id }}">
-                    <button type="submit">➕ {{ match.player2_name }}</button>
+                    <input type="hidden" name="player_id" value="{{ match.player2.id }}">
+                    <button type="submit">➕ {{ match.player2.name }}</button>
                 </form>
             </div>
             {% endif %}
 
             <!-- Победитель -->
-            {% if match.winner_name %}
+            {% if match.winner.name %}
             <div class="winner-container">
-                <h2>🏆 ПОБЕДИТЕЛЬ: {{ match.winner_name }} 🏆</h2>
+                <h2>🏆 ПОБЕДИТЕЛЬ: {{ match.winner.name }} 🏆</h2>
             </div>
             {% endif %}
 

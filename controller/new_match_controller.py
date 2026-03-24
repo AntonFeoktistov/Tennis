@@ -14,11 +14,11 @@ class NewMatchController(BaseController):
 
     def handle_post(self, request: Request) -> Response:
         try:
-            match_data = self.service.create_match(request.form_data)
+            match_dto = self.service.create_match(request.form_data)
             return Response(
                 body="",
                 status=302,
-                headers=[("Location", f"/match-score?uuid={match_data['uuid']}")],
+                headers=[("Location", f"/match-score?uuid={match_dto.uuid}")],
             )
         except errors.NotValidNameError as e:
             html = self.view.render_template("new_match.html", error=True)

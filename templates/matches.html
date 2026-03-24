@@ -49,13 +49,13 @@
         </thead>
         <tbody>
             {% if matches %}
-            {% for match in matches %}
+            {% for match in matches.matches %}
             <tr>
-                <td>{{ match.player1_name }}</td>
-                <td>{{ match.player2_name }}</td>
+                <td>{{ match.player1.name }}</td>
+                <td>{{ match.player2.name }}</td>
                 <td>{{ match.score1.sets }}:{{ match.score2.sets }} ({{ match.score1.games }}:{{ match.score2.games }})
                 </td>
-                <td>{{ match.winner_name if match.winner_name else "не выявлен" }}</td>
+                <td>{{ match.winner.name if match.winner.name else "не выявлен" }}</td>
                 <td>
                     <a href="/match-score?uuid={{ match.uuid }}"
                         style="background-color: #3498db; color: white; padding: 5px 10px; border-radius: 4px; display: inline-block;">▶️
@@ -72,29 +72,29 @@
     </table>
 
     <!-- Пагинация -->
-    {% if total_pages > 1 %}
+    {% if matches.total_pages > 1 %}
     <div class="pagination">
-        {% if current_page > 1 %}
+        {% if matches.current_page > 1 %}
         <a
-            href="/matches?page={{ current_page - 1 }}{% if filter_name %}&filter_name={{ filter_name }}{% endif %}{% if completed_only %}&completed_only=true{% endif %}">
+            href="/matches?page={{ matches.current_page - 1 }}{% if matches.filter_name %}&filter_name={{ matches.filter_name }}{% endif %}{% if matches.completed_only %}&completed_only=true{% endif %}">
             ← Назад
         </a>
         {% else %}
         <span>← Назад</span>
         {% endif %}
 
-        {% for p in range(1, total_pages + 1) %}
-        {% if p == current_page %}
+        {% for p in range(1, matches.total_pages + 1) %}
+        {% if p == matches.current_page %}
         <strong>{{ p }}</strong>
         {% else %}
         <a
-            href="/matches?page={{ p }}{% if filter_name %}&filter_name={{ filter_name }}{% endif %}{% if completed_only %}&completed_only=true{% endif %}">{{
+            href="/matches?page={{ p }}{% if matches.filter_name %}&filter_name={{ matches.filter_name }}{% endif %}{% if matches.completed_only %}&completed_only=true{% endif %}">{{
             p }}</a>
         {% endif %}
         {% endfor %}
 
-        {% if current_page < total_pages %} <a
-            href="/matches?page={{ current_page + 1 }}{% if filter_name %}&filter_name={{ filter_name }}{% endif %}{% if completed_only %}&completed_only=true{% endif %}">
+        {% if matches.current_page < matches.total_pages %} <a
+            href="/matches?page={{ matches.current_page + 1 }}{% if matches.filter_name %}&filter_name={{ matches.filter_name }}{% endif %}{% if matches.completed_only %}&completed_only=true{% endif %}">
             Вперёд →
             </a>
             {% else %}
@@ -103,14 +103,12 @@
     </div>
     {% endif %}
 
-    <!-- Информация о количестве -->
-    {% if total_count > 0 %}
+    {% if matches.total_count > 0 %}
     <div class="info">
-        📊 Всего матчей: {{ total_count }}, страница {{ current_page }} из {{ total_pages }}
+        📊 Всего матчей: {{ matches.total_count }}, страница {{ matches.current_page }} из {{ matches.total_pages }}
     </div>
     {% endif %}
 
-    <!-- Кнопки внизу -->
     <div class="matches-footer-buttons">
         <a href="/newmatch">➕ Начать новый матч</a>
         <a href="/">🏠 Главная</a>

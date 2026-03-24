@@ -7,6 +7,10 @@ from repository.match_repository import MatchRepository
 from errors import errors
 from data.db import get_session
 from sqlalchemy import update
+from dto.player_dto import PlayerDto
+from dto.match_dto import MatchDto
+from dto.score_dto import ScoreDto
+from dto.matches_dto import MatchesDto
 
 
 class Service(ScoreMixin):
@@ -36,8 +40,8 @@ class Service(ScoreMixin):
             match = match_repo.create_match(player1, player2)
 
             match_repo.save()
-            match_data = self.make_match_data(match, None)
-            return match_data
+            match_dto = self.make_match_dto(match, None)
+            return match_dto
         finally:
             session.close()
 
@@ -60,7 +64,7 @@ class Service(ScoreMixin):
             match_repo.save()
             session.expire_all()
             updated_match = match_repo.get_match_by_id(match.id)
-            return self.make_match_data(updated_match, winner)
+            return self.make_match_dto(updated_match, winner)
         except Exception as e:
             print(f"Error: {e}")
             session.rollback()
@@ -76,8 +80,8 @@ class Service(ScoreMixin):
             if not uuid:
                 return {}
             match = match_repo.get_match_by_uuid(uuid)
-            match_data = self.make_match_data(match, match.winner) if match else {}
-            return match_data
+            match_dto = self.make_match_dto(match, match.winner) if match else {}
+            return match_dto
         finally:
             session.close()
 
@@ -87,58 +91,76 @@ class Service(ScoreMixin):
         elif match.player2_id == player_id:
             return match.player1_id
 
-    def get_all_matches_data(self, query):
+    def get_all_matches_dto(self, query):
         session = get_session()
         try:
             match_repo = self.match_repository(session)
 
-            player_name = (query.get("filter_name") or [""])[0]
+            filter_name = (query.get("filter_name") or [""])[0]
             completed_only = (query.get("completed_only") or [""])[0]
             page = (query.get("page") or [""])[0]
-            page = int(page) if page else 1
+            current_page = int(page) if page else 1
+
             matches, total_count = match_repo.get_filtred_matches(
-                player_name, completed_only, page
+                filter_name, completed_only, current_page
             )
-            matches_data = []
+            match_dto_list = []
             for match in matches:
                 winner = self.get_winner(match)
-                match_data = self.make_match_data(match, winner)
-                matches_data.append(match_data)
-            page_data = self.make_page_data(
-                matches_data, total_count, page, player_name, completed_only
+                match_dto = self.make_match_dto(match, winner)
+                match_dto_list.append(match_dto)
+            matches_dto = self.make_matches_dto(
+                match_dto_list, total_count, current_page, filter_name, completed_only
             )
-            return page_data
+            return matches_dto
         finally:
             session.close()
 
-    def make_match_data(self, match: Match, winner: Player):
+    def make_match_dto(self, match: Match, winner: Player):
         score1 = match.score.get(str(match.player1_id), {})
         score2 = match.score.get(str(match.player2_id), {})
-        return {
-            "id": match.id,
-            "uuid": match.uuid,
-            "player1_id": match.player1_id,
-            "player2_id": match.player2_id,
-            "winner_id": match.winner_id,
-            "score1": score1,
-            "score2": score2,
-            "player1_name": match.player1.name if match.player1 else None,
-            "player2_name": match.player2.name if match.player2 else None,
-            "winner_name": winner.name if winner else None,
-        }
+        player1_dto = PlayerDto(id=match.player1_id, name=match.player1.name)
+        player2_dto = PlayerDto(id=match.player2_id, name=match.player2.name)
+        winner_dto = PlayerDto(id=winner.id, name=winner.name) if winner else None
+        score1_dto = ScoreDto(score1["sets"], score1["games"], score1["points"])
+        score2_dto = ScoreDto(score2["sets"], score2["games"], score2["points"])
 
-    def make_page_data(
-        self, matches_data, total_count, page, player_name, completed_only
+        return MatchDto(
+            match.id,
+            match.uuid,
+            player1_dto,
+            player2_dto,
+            winner_dto,
+            score1_dto,
+            score2_dto,
+        )
+
+    def make_matches_dto(
+        self, matches, total_count, current_page, filter_name, completed_only
     ):
         per_page = 5
         total_pages = (total_count + per_page - 1) // per_page
+        return MatchesDto(
+            matches,
+            total_count,
+            total_pages,
+            current_page,
+            per_page,
+            filter_name,
+            completed_only,
+        )
 
-        return {
-            "matches": matches_data,
-            "total_count": total_count,
-            "total_pages": total_pages,
-            "current_page": page,
-            "per_page": per_page,
-            "filter_name": player_name,
-            "completed_only": completed_only,
-        }
+
+# match.id = match.id
+#         return {
+#             "id": match.id,
+#             "uuid": match.uuid,
+#             "player1_id": match.player1_id,
+#             "player2_id": match.player2_id,
+#             "winner_id": match.winner_id,
+#             "score1": score1,
+#             "score2": score2,
+#             "player1_name": match.player1.name if match.player1 else None,
+#             "player2_name": match.player2.name if match.player2 else None,
+#             "winner_name": winner.name if winner else None,
+#         }
