@@ -37,11 +37,16 @@ class Service(ScoreMixin, FilterMixin):
         try:
             match_repo = self.match_repository(session)
             matches = self.cache.get_all()
+            if not matches:
+                return
             for match in matches:
-                match_repo.update_score(match.id, match.score)
-                if match.winner_id:
-                    match_repo.update_winner(match.id, match.winner_id)
-            match_repo.save()
+                session.query(Match).filter(Match.id == match.id).update(
+                    {"score": match.score, "winner_id": match.winner_id}
+                )
+            session.commit()
+        except Exception as e:
+            print(f"[SAVE] Ошибка: {e}")
+            session.rollback()
         finally:
             session.close()
         self.cache.clear()
@@ -126,6 +131,16 @@ class Service(ScoreMixin, FilterMixin):
             return match.player2_id
         elif match.player2_id == player_id:
             return match.player1_id
+
+    def get_winner(self, match: Match):
+        p1_score = match.score.get(str(match.player1_id), {})
+        p2_score = match.score.get(str(match.player2_id), {})
+
+        if p1_score.get("sets", 0) == 2:
+            return match.player1
+        if p2_score.get("sets", 0) == 2:
+            return match.player2
+        return None
 
     def get_all_matches_dto(self, query):
         session = get_session()

@@ -1,4 +1,5 @@
 /* style.css - единый файл для всех страниц */
+/* Оптимизированная версия: убраны тяжелые анимации, добавлены will-change */
 
 /* Базовые стили */
 body {
@@ -9,10 +10,10 @@ body {
     color: #333;
 }
 
-/* Для главной и страницы ошибки (градиентный фон) */
+/* Для главной и страницы ошибки (упрощенный фон вместо градиента) */
 body.index-page,
 body.error-page {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #667eea;
     min-height: 100vh;
     display: flex;
     justify-content: center;
@@ -95,7 +96,7 @@ input[type="text"]:focus {
     border-color: #27ae60;
 }
 
-/* Кнопки */
+/* Кнопки - оптимизированные анимации */
 button,
 .button {
     background-color: #27ae60;
@@ -105,7 +106,7 @@ button,
     border-radius: 4px;
     cursor: pointer;
     font-size: 14px;
-    transition: background-color 0.3s;
+    transition: background-color 0.2s ease;
 }
 
 button:hover,
@@ -131,13 +132,14 @@ a:hover {
     padding: 12px 24px;
     border-radius: 8px;
     font-weight: bold;
+    transition: background-color 0.2s ease;
 }
 
 .index-page a:hover,
 .error-page a:hover {
     background-color: #219a52;
     text-decoration: none;
-    transform: translateY(-2px);
+    /* убран transform */
 }
 
 /* Пагинация */
@@ -235,7 +237,7 @@ a:hover {
     font-size: 18px;
 }
 
-/* Кнопки действий */
+/* Кнопки действий - оптимизированные */
 .action-buttons {
     display: flex;
     gap: 20px;
@@ -256,13 +258,13 @@ a:hover {
     padding: 20px 40px;
     min-width: 150px;
     background-color: #27ae60;
-    transition: all 0.2s;
+    transition: background-color 0.2s ease;
+    will-change: background-color;
 }
 
 .action-buttons button:hover {
     background-color: #219a52;
-    transform: scale(1.05);
-    cursor: pointer;
+    /* убран transform: scale() */
 }
 
 /* Блок победителя */
@@ -296,6 +298,7 @@ a:hover {
     background-color: #3498db;
     color: white;
     border-radius: 6px;
+    transition: background-color 0.2s ease;
 }
 
 .match-nav a:hover {
@@ -324,12 +327,12 @@ a:hover {
     font-size: 16px;
     font-weight: bold;
     text-decoration: none;
-    transition: all 0.3s;
+    transition: background-color 0.2s ease;
 }
 
 .matches-footer-buttons a:hover {
     background-color: #219a52;
-    transform: translateY(-2px);
+    /* убран transform */
     text-decoration: none;
 }
 
@@ -388,11 +391,12 @@ a:hover {
     font-weight: bold;
     background-color: #27ae60;
     margin-top: 10px;
+    transition: background-color 0.2s ease;
 }
 
 .newmatch-form button:hover {
     background-color: #219a52;
-    transform: translateY(-2px);
+    /* убран transform */
 }
 
 .newmatch-form .error {
@@ -437,13 +441,14 @@ a:hover {
     font-size: 18px;
     font-weight: bold;
     text-decoration: none;
-    transition: all 0.3s;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
     text-align: center;
 }
 
 .index-buttons a:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    background-color: #219a52;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    /* убран transform */
     text-decoration: none;
 }
 
