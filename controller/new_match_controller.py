@@ -2,8 +2,6 @@ from controller.base_controller import BaseController
 from dto.response import Response
 from dto.request import Request
 from errors import errors
-from view.view import View
-from service.service import Service
 
 
 class NewMatchController(BaseController):

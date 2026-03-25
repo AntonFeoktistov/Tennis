@@ -6,6 +6,7 @@ from controller.new_match_controller import NewMatchController
 from controller.match_score_controller import MatchScoreController
 
 
+# фабрика контроллеров для роутера
 class Container:
     def __init__(self):
         self.view = View()

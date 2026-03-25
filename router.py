@@ -12,11 +12,11 @@ class Router:
         }
 
     def dispatch(self, request) -> Response:
-        controller_factory = self.routes.get(request.path)
-        if not controller_factory:
+        controllers_factory = self.routes.get(request.path)
+        if not controllers_factory:
             return Response("Page not found", 404)
 
-        controller = controller_factory()
+        controller = controllers_factory()
 
         if request.method == "GET":
             return controller.handle_get(request)

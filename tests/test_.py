@@ -1,49 +1,106 @@
-from dataclasses import dataclass
-
 import pytest
 from service.service import ScoreMixin
-from model.match import Match
-from model.player import Player
-
-"""нужно сделать параметризацию чтобы вводить 3 числа: сеты геймыы и поинты """
-
-
-@dataclass
-class Score:
-    score_dict: dict
-    player_id: int
-    opponent_id: int
 
 
 class TestScoreMixin:
-    @pytest.fixture
-    def scorer(self, scope="class"):
+
+    @pytest.fixture(scope="class")
+    def scorer(self):
         return ScoreMixin()
 
-    @pytest.fixture
-    def score(self, scope="session"):
-        player_id = 1
-        opponent_id = 2
+    @pytest.mark.parametrize("points, points_after", [(0, 15), (15, 30), (30, 40)])
+    def test_update_score_dict_0_15_30(self, points, points_after, scorer):
         score_dict = {
-            "1": {"sets": 0, "games": 0, "points": 0},
+            "1": {"sets": 0, "games": 0, "points": points},
             "2": {"sets": 0, "games": 0, "points": 0},
         }
-        return Score(score_dict, player_id, opponent_id)
+        result = scorer.update_score_dict(score_dict, player_id=1, opponent_id=2)
+        assert result["1"]["points"] == points_after
+        assert result["2"]["points"] == 0
 
-    def set_score(self, score: dict, sets=0, games=0, points=0):
-        score["sets"] = sets
-        score["games"] = games
-        score["points"] = points
-
-    @pytest.mark.parametrize("points, points_after", [(0, 15), (15, 30), (30, 40)])
-    def test_add_points_not_tiebreak_not_gameball(
-        self, scorer, score: Score, points, points_after
+    @pytest.mark.parametrize(
+        "opponent_points, points_after, opponent_after",
+        [(40, "AD", 40), ("AD", 40, 40)],
+    )
+    def test_update_score_dict_40_not_wingame(
+        self, scorer, opponent_points, points_after, opponent_after
     ):
-        player_score = score.score_dict[score.player_id]
-        opponent_score = score.score_dict[score.opponent_id]
-        self.set_score(
-            player_score,
-        )
-        scorer.update_score_dict(score.score_dict, score.player_id, score.oponent_id)
+        score_dict = {
+            "1": {"sets": 0, "games": 0, "points": 40},
+            "2": {"sets": 0, "games": 0, "points": opponent_points},
+        }
+        result = scorer.update_score_dict(score_dict, player_id=1, opponent_id=2)
 
-        assert player["points"] == player_after["points"]
+        assert result["1"]["points"] == points_after
+        assert result["2"]["points"] == opponent_after
+
+    @pytest.mark.parametrize("points, opponent_points", [(40, 30), ("AD", 40)])
+    def test_update_score_dict_win_game(self, scorer, points, opponent_points):
+        score_dict = {
+            "1": {"sets": 0, "games": 0, "points": points},
+            "2": {"sets": 0, "games": 0, "points": opponent_points},
+        }
+        result = scorer.update_score_dict(score_dict, player_id=1, opponent_id=2)
+
+        assert result["1"]["games"] == 1
+        assert result["2"]["games"] == 0
+        assert result["1"]["points"] == 0
+        assert result["2"]["points"] == 0
+
+    @pytest.mark.parametrize("games, opponent_games", [(5, 5), (5, 6)])
+    def test_update_score_dict_win_game_5_not_winset(
+        self, scorer, games, opponent_games
+    ):
+        score_dict = {
+            "1": {"sets": 0, "games": games, "points": 40},
+            "2": {"sets": 0, "games": opponent_games, "points": 30},
+        }
+        result = scorer.update_score_dict(score_dict, player_id=1, opponent_id=2)
+
+        assert result["1"]["sets"] == 0
+        assert result["2"]["sets"] == 0
+        assert result["1"]["games"] == games + 1
+        assert result["2"]["games"] == opponent_games
+        assert result["1"]["points"] == 0
+        assert result["2"]["points"] == 0
+
+    @pytest.mark.parametrize("games, opponent_games", [(6, 4), (6, 5)])
+    def test_update_score_dict_win_set(self, scorer, games, opponent_games):
+        score_dict = {
+            "1": {"sets": 0, "games": games, "points": 40},
+            "2": {"sets": 0, "games": opponent_games, "points": 30},
+        }
+        result = scorer.update_score_dict(score_dict, player_id=1, opponent_id=2)
+
+        assert result["1"]["sets"] == 1
+        assert result["1"]["games"] == 0
+        assert result["2"]["games"] == 0
+        assert result["1"]["points"] == 0
+        assert result["2"]["points"] == 0
+
+    def test_update_score_start_tiebreak(self, scorer):
+        score_dict = {
+            "1": {"sets": 0, "games": 6, "points": 0},
+            "2": {"sets": 0, "games": 6, "points": 0},
+        }
+        result = scorer.update_score_dict(score_dict, player_id=1, opponent_id=2)
+
+        assert result["1"]["sets"] == 0
+        assert result["1"]["games"] == 6
+        assert result["2"]["games"] == 6
+        assert result["1"]["points"] == 1
+        assert result["2"]["points"] == 0
+
+    @pytest.mark.parametrize("points, opponent_points", [(6, 5), (6, 6)])
+    def test_update_score_win_tiebreak(self, scorer, points, opponent_points):
+        score_dict = {
+            "1": {"sets": 0, "games": 6, "points": points},
+            "2": {"sets": 0, "games": 6, "points": opponent_points},
+        }
+        result = scorer.update_score_dict(score_dict, player_id=1, opponent_id=2)
+
+        assert result["1"]["sets"] == 1
+        assert result["1"]["games"] == 0
+        assert result["2"]["games"] == 0
+        assert result["1"]["points"] == 0
+        assert result["2"]["points"] == 0
