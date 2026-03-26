@@ -15,8 +15,11 @@ class MatchScoreController(BaseController):
 
     def handle_post(self, request: Request) -> Response:
         match_dto = self.service.add_score(request.form_data)
-        return Response(
-            body="",
-            status=302,
-            headers=[("Location", f"/match-score?uuid={match_dto.uuid}")],
-        )
+        if match_dto:
+            return Response(
+                body="",
+                status=302,
+                headers=[("Location", f"/match-score?uuid={match_dto.uuid}")],
+            )
+        html = self.view.render_template("not_found.html")
+        return Response(html, 404)

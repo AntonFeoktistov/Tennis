@@ -53,12 +53,19 @@ class Service(ScoreMixin, FilterMixin):
         try:
             match_repo = self.match_repository(session)
 
-            match_uuid = form.get("match_uuid")[0]
-            player_id = int(form.get("player_id")[0])
+            match_uuid = (form.get("match_uuid") or [""])[0]
+            player_id = int((form.get("player_id") or ["0"])[0])
             match = self.cache.get(match_uuid)
             if not match:
                 match = match_repo.get_match_by_uuid(match_uuid)
+            if not match:
+                return
             opponent_id = self.get_opponent_id(match, player_id)
+            if not opponent_id:
+                return
+            # обработка запроса к завершенному матчу
+            if self.get_winner(match):
+                return self.make_match_dto(match, self.get_winner(match))
 
             new_score = self.update_score_dict(match.score, player_id, opponent_id)
             match.score = new_score
@@ -90,6 +97,8 @@ class Service(ScoreMixin, FilterMixin):
             match = self.cache.get(uuid)
             if not match:
                 match = match_repo.get_match_by_uuid(uuid)
+            if not match:
+                return
 
             winner = self.get_winner(match)
             return self.make_match_dto(match, winner)
@@ -160,6 +169,10 @@ class Service(ScoreMixin, FilterMixin):
         per_page = 5
         total_pages = (total_count + per_page - 1) // per_page
         paginated_matches = []
+        # запрос на несуществующую страницу
+        if current_page > total_pages:
+            return
+
         for match in matches:
             winner = self.get_winner(match)
             paginated_matches.append(self.make_match_dto(match, winner))

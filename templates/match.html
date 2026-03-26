@@ -37,7 +37,6 @@
                 </tbody>
             </table>
 
-            <!-- Кнопки для добавления очков -->
             {% if not match.winner.name %}
             <div class="action-buttons">
                 <form method="POST" action="/match-score">
@@ -54,14 +53,12 @@
             </div>
             {% endif %}
 
-            <!-- Победитель -->
             {% if match.winner.name %}
             <div class="winner-container">
                 <h2>🏆 ПОБЕДИТЕЛЬ: {{ match.winner.name }} 🏆</h2>
             </div>
             {% endif %}
 
-            <!-- Навигация -->
             <div class="match-nav">
                 <a href="/newmatch">➕ Новый матч</a>
                 <a href="/matches">📋 Все матчи</a>
