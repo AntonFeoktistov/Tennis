@@ -54,6 +54,12 @@ class BaseHandler(BaseHTTPRequestHandler):
 
     def send_static(self):
         file_path = self.path[len("/static/") :]
+
+        # defence from Path Traversal
+        if ".." in file_path:
+            response = Response("Forbidden", 403)
+            self._send_response(response)
+            return
         try:
             with open(os.path.join("static", file_path), "rb") as f:
                 self.send_response(200)

@@ -1,6 +1,4 @@
-from typing import List
 from model.match import Match
-from dto.match_dto import MatchDto
 
 
 class FilterMixin:
@@ -31,8 +29,8 @@ class FilterMixin:
             return unique
 
     def _filter_by_player_name(
-        self, matches: List[Match], filter_name: str
-    ) -> List[Match]:
+        self, matches: list[Match], filter_name: str
+    ) -> list[Match]:
         if filter_name:
             filtered_matches = []
             for match in matches:
@@ -46,11 +44,11 @@ class FilterMixin:
             return filtered_matches
         return matches
 
-    def _sort_matches(self, matches: List[Match]) -> List[Match]:
+    def _sort_matches(self, matches: list[Match]) -> list[Match]:
         matches.sort(key=lambda m: m.id, reverse=True)
         return matches
 
-    def _paginate_matches(self, matches: List[Match], page: int, per_page: int = 5):
+    def _paginate_matches(self, matches: list[Match], page: int, per_page: int = 5):
 
         start = (page - 1) * per_page
         end = start + per_page

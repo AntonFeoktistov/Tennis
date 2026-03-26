@@ -21,35 +21,6 @@ class Service(ScoreMixin, FilterMixin):
         self.match_repository = MatchRepository
         self.cache = MatchCache()
 
-    def load_unfinished_matches(self):
-        session = get_session()
-        try:
-            match_repo = self.match_repository(session)
-            matches = match_repo.get_unfinished_matches()
-            for match in matches:
-                self.cache.set(match)
-        finally:
-            session.close()
-
-    def save_active_matches(self):
-        session = get_session()
-        try:
-            match_repo = self.match_repository(session)
-            matches = self.cache.get_all()
-            if not matches:
-                return
-            for match in matches:
-                session.query(Match).filter(Match.id == match.id).update(
-                    {"score": match.score, "winner_id": match.winner_id}
-                )
-            session.commit()
-        except Exception as e:
-            print(f"[SAVE] Ошибка: {e}")
-            session.rollback()
-        finally:
-            session.close()
-        self.cache.clear()
-
     def create_match(self, form: dict):
         session = get_session()
         try:
@@ -201,3 +172,31 @@ class Service(ScoreMixin, FilterMixin):
             filter_name,
             completed_only,
         )
+
+    def load_unfinished_matches(self):
+        session = get_session()
+        try:
+            match_repo = self.match_repository(session)
+            matches = match_repo.get_unfinished_matches()
+            for match in matches:
+                self.cache.set(match)
+        finally:
+            session.close()
+
+    def save_active_matches(self):
+        session = get_session()
+        try:
+            matches = self.cache.get_all()
+            if not matches:
+                return
+            for match in matches:
+                session.query(Match).filter(Match.id == match.id).update(
+                    {"score": match.score, "winner_id": match.winner_id}
+                )
+            session.commit()
+        except Exception as e:
+            print(f"[SAVE] Ошибка: {e}")
+            session.rollback()
+        finally:
+            session.close()
+        self.cache.clear()

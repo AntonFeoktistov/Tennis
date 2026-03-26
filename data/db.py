@@ -1,9 +1,8 @@
-# data/db.py
 import os
 from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from model.base import Base  # ← импортируем Base из model/base.py
+from model.base import Base
 
 BASE_DIR = Path(__file__).parent.parent
 DATA_DIR = BASE_DIR / "data"

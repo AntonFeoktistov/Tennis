@@ -9,7 +9,6 @@ class Player(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(35), nullable=False)
 
-    # Связи
     matches_as_player1 = relationship(
         "Match", foreign_keys="[Match.player1_id]", back_populates="player1"
     )
